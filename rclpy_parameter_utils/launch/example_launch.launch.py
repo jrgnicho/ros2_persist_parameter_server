@@ -18,6 +18,7 @@ def load_yaml(yaml_file_path):
 
 def launch_setup(context, *args, **kwargs):
     
+    parameter_server_name = LaunchConfiguration('parameter_server_name').perform(context)
     parameter_yaml_file  = LaunchConfiguration('param_yaml_file').perform(context)
     parameters_yaml = load_yaml(parameter_yaml_file)
     
@@ -25,21 +26,24 @@ def launch_setup(context, *args, **kwargs):
     
     
     parameter_server_node = Node(
-        node_executable = 'server',
+        executable = 'server',
         package = 'parameter_server',
-        node_name = 'global_parameter_server',
-        output = 'screen',
+        name = parameter_server_name,
+        output = 'log',
         parameters = [parameters_yaml],
         respawn_delay = 5.0)
     
     example_parameter_client_node = Node(
-        node_executable = 'example_parameter_client.py',
+        executable = 'example_param_client.py',
         package = 'rclpy_parameter_utils',
-        node_name = 'example_parameter_client',
+        name = 'example_parameter_client',
+        parameters = [{'parameter_server_name': parameter_server_name}],
         output = 'screen')
     
-    return [parameter_server_node,]
-            #example_parameter_client_node]
+    nodes_list = [parameter_server_node]
+    #nodes_list.append(example_parameter_client_node)
+    
+    return nodes_list
 
 def generate_launch_description():
     
@@ -47,6 +51,9 @@ def generate_launch_description():
     
     ld.add_action(DeclareLaunchArgument('param_yaml_file',
         default_value = path.join(get_package_share_directory('rclpy_parameter_utils'), 'launch','example_params.yaml')))
+    
+    ld.add_action(DeclareLaunchArgument('parameter_server_name', default_value = 'global_parameter_server'))
+    
     ld.add_action(OpaqueFunction(function = launch_setup))
     
     return ld

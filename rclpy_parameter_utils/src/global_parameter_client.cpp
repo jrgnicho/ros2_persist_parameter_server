@@ -11,14 +11,106 @@
 
 #include "global_parameter_client.hpp"
 
+namespace PythonTypes
+{
+  namespace py = pybind11;
+  static py::object Parameter = py::module::import("rclpy").attr("Parameter");
+  static py::object ParameterMsg = py::module::import("rcl_interfaces.msg").attr("Parameter");
+  static py::object ParameterValueMsg = py::module::import("rcl_interfaces.msg").attr("ParameterValue");
+}
+
+static pybind11::object toPyObj(const rcl_interfaces::msg::ParameterValue& obj)
+{
+  namespace py = pybind11;
+  py::object py_obj = PythonTypes::ParameterValueMsg();
+
+  // copying
+  py_obj.attr("type") = py::cast(obj.type);
+  py_obj.attr("bool_value") = py::cast(obj.bool_value);
+  py_obj.attr("integer_value") = py::cast(obj.integer_value);
+  py_obj.attr("double_value") = py::cast(obj.double_value);
+  py_obj.attr("string_value") = py::cast(obj.string_value);
+  py_obj.attr("byte_array_value") = py::cast(obj.byte_array_value);
+  py_obj.attr("bool_array_value") = py::cast(obj.bool_array_value);
+  py_obj.attr("integer_array_value") = py::cast(obj.integer_array_value);
+  py_obj.attr("double_array_value") = py::cast(obj.double_array_value);
+  py_obj.attr("string_array_value") = py::cast(obj.string_array_value);
+  return py_obj;
+}
+
+static pybind11::object toPyObj(const rcl_interfaces::msg::Parameter& obj)
+{
+  namespace py = pybind11;
+  py::object py_obj = PythonTypes::ParameterMsg();
+
+  // copying
+  py_obj.attr("value") = toPyObj(obj.value);
+  py_obj.attr("name") = py::cast(obj.name);
+  return py_obj;
+}
+
+static pybind11::object toPyObj(const rclcpp::Parameter& obj)
+{
+  namespace py = pybind11;
+  py::object py_param_msg = toPyObj(obj.to_parameter_msg());
+  py::object py_param = PythonTypes::Parameter.attr("from_parameter_msg")(py_param_msg);
+  return py_param;
+}
+
+template <class T>
+T fromPyObj(const pybind11::object& py_obj)
+{
+  T obj;
+  return obj;
+}
+
+template <>
+rcl_interfaces::msg::ParameterValue fromPyObj(const pybind11::object& py_obj)
+{
+  rcl_interfaces::msg::ParameterValue obj;
+
+  // copying
+  obj.bool_value = py_obj.attr("bool_value").cast<decltype(obj.bool_value)>();
+  obj.integer_value = py_obj.attr("integer_value").cast<decltype(obj.integer_value)>();
+  obj.double_value = py_obj.attr("double_value").cast<decltype(obj.double_value)>();
+  obj.string_value = py_obj.attr("string_value").cast<decltype(obj.string_value)>();
+  obj.byte_array_value = py_obj.attr("byte_array_value").cast<decltype(obj.byte_array_value)>();
+  obj.bool_array_value = py_obj.attr("bool_array_value").cast<decltype(obj.bool_array_value)>();
+  obj.integer_array_value = py_obj.attr("integer_array_value").cast<decltype(obj.integer_array_value)>();
+  obj.double_array_value = py_obj.attr("double_array_value").cast<decltype(obj.double_array_value)>();
+  obj.string_array_value = py_obj.attr("string_array_value").cast<decltype(obj.string_array_value)>();
+  obj.type = py_obj.attr("type").cast<decltype(obj.type)>();
+
+  return obj;
+}
+
+template <>
+rcl_interfaces::msg::Parameter fromPyObj(const pybind11::object& py_obj)
+{
+  rcl_interfaces::msg::Parameter obj;
+
+  // copying
+  obj.name = py_obj.attr("name").cast<decltype(obj.name)>();
+  obj.value = fromPyObj<rcl_interfaces::msg::ParameterValue>(py_obj.attr("value"));
+  return obj;
+}
+
+template <>
+rclcpp::Parameter fromPyObj(const pybind11::object& py_obj)
+{
+  rcl_interfaces::msg::Parameter param_msg = fromPyObj<rcl_interfaces::msg::Parameter>(py_obj.attr("to_parameter_msg")());
+  return rclcpp::Parameter::from_parameter_msg(param_msg);
+}
+
 namespace rclpy_parameter_utils
 {
 
 GlobalParameterClient::GlobalParameterClient(const std::string& node_name, const std::string& node_namespace, int number_of_threads):
     RclCppComponent(),
+    node_(std::make_shared<rclcpp::Node>(node_name, node_namespace, rclcpp::NodeOptions())),
     executor_(rclcpp::ExecutorOptions(), number_of_threads)
 {
-  node_ = std::make_shared<rclcpp::Node>(node_name, node_namespace);
+
 }
 
 GlobalParameterClient::~GlobalParameterClient()
@@ -43,39 +135,27 @@ void GlobalParameterClient::stop()
   }
 }
 
-rcl_interfaces::msg::Parameter GlobalParameterClient::getParameter(const std::string& full_parameter_name, double timeout_secs)
+pybind11::object GlobalParameterClient::getParameter(const std::string& remote_node_name,
+                                                                   const std::string& parameter_name, double timeout_secs)
 {
-  rcl_interfaces::msg::Parameter ret_param_msg;
-  ret_param_msg.value.type = rcl_interfaces::msg::ParameterType::PARAMETER_NOT_SET;
-
-  std::size_t last_slash_pos = full_parameter_name.find_last_not_of('/');
-  if(last_slash_pos >= full_parameter_name.size()-1)
-  {
-    return ret_param_msg;
-  }
-  std::string remote_node_name = full_parameter_name.substr(0, last_slash_pos);
-  std::string param_name = full_parameter_name.substr(last_slash_pos + 1, std::string::npos);
-
-  std::vector<rclcpp::Parameter> parameters = getParametersImpl(remote_node_name, {param_name}, timeout_secs);
+  std::vector<rclcpp::Parameter> parameters = getParametersImpl(remote_node_name, {parameter_name}, timeout_secs);
   if(parameters.empty())
   {
-    return ret_param_msg;
+    return toPyObj(rclcpp::Parameter());
   }
 
-  ret_param_msg = parameters.front().to_parameter_msg();
-  return ret_param_msg;
+  return toPyObj(parameters.front());
 }
 
-pybind11::dict GlobalParameterClient::getParameters(const std::string& parameters_namespace, const std::vector<std::string>& parameter_names, double timeout_secs)
+pybind11::dict GlobalParameterClient::getParameters(const std::string& remote_node_name,
+                                                    const std::vector<std::string>& parameter_names, double timeout_secs)
 {
-  std::vector<rclcpp::Parameter> parameters = getParametersImpl(parameters_namespace, parameter_names, timeout_secs);
+  std::vector<rclcpp::Parameter> parameters = getParametersImpl(remote_node_name, parameter_names, timeout_secs);
   pybind11::dict output_dict;
   for(const auto& p : parameters)
   {
     pybind11::object pystr = pybind11::cast(p.get_name(), pybind11::return_value_policy::copy); // TODO: May not be necessary to "copy"
-    rcl_interfaces::msg::Parameter p_msg = p_msg = p.to_parameter_msg();
-
-    output_dict[pystr] = pybind11::cast(p_msg);
+    output_dict[pystr] = toPyObj(p);
   }
   return output_dict;
 }
@@ -85,32 +165,40 @@ rclcpp::SyncParametersClient GlobalParameterClient::createParameterClient(rclcpp
                                                    double timeout_secs)
 {
   rclcpp::SyncParametersClient parameter_client = rclcpp::SyncParametersClient(node,remote_node_name);
-  parameter_client.wait_for_service(std::chrono::duration<double>(timeout_secs));
-  if(!parameter_client.service_is_ready())
+  if(!parameter_client.wait_for_service(std::chrono::duration<double>(timeout_secs)))
   {
-    const std::string error_msg = boost::str(boost::format("Failed to connect to parameter service %s") % remote_node_name);
+    const std::string error_msg = boost::str(boost::format("Failed to connect to parameter server node \"%s\"") % remote_node_name);
     throw std::runtime_error(error_msg);
   }
   return parameter_client;
 }
 
-std::vector<rclcpp::Parameter> GlobalParameterClient::getParametersImpl(const std::string& remote_node_name, const std::vector<std::string>& parameter_names, double timeout_secs)
+std::vector<rclcpp::Parameter> GlobalParameterClient::getParametersImpl(const std::string& remote_node_name,
+                                                                        const std::vector<std::string>& parameter_names,
+                                                                        double timeout_secs)
 {
-  rclcpp::SyncParametersClient parameter_client = createParameterClient(node_,remote_node_name, timeout_secs);
+  rclcpp::SyncParametersClient parameter_client = createParameterClient(node_,
+                                                                        remote_node_name, timeout_secs);
   std::vector<rclcpp::Parameter> parameters = parameter_client.get_parameters(parameter_names);
   return parameters;
 }
 
-void GlobalParameterClient::setParameter(const std::string &full_parameter_name, const rclcpp::ParameterValue& parameter_val, double timeout_secs)
+void GlobalParameterClient::setParameter(const std::string &remote_node_name, const pybind11::object& py_obj,
+                                         double timeout_secs)
 {
-  std::size_t last_slash_pos = full_parameter_name.find_last_not_of('/');
-  if(last_slash_pos >= full_parameter_name.size()-1)
-  {
-    throw std::runtime_error(boost::str(boost::format("Parameter name %s is malformed") % full_parameter_name));
-  }
-  std::string remote_node_name = full_parameter_name.substr(0, last_slash_pos);
-  std::string param_name = full_parameter_name.substr(last_slash_pos + 1, std::string::npos);
-  setParametersImpl(remote_node_name, {rclcpp::Parameter(param_name,parameter_val)}, timeout_secs);
+  setParametersImpl(remote_node_name, {fromPyObj<rclcpp::Parameter>(py_obj)}, timeout_secs);
+}
+
+void GlobalParameterClient::setParameters(const std::string &remote_node_name,
+                                          const std::vector<pybind11::object>& py_obj_list,
+                                          double timeout_secs)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  std::transform(py_obj_list.cbegin(), py_obj_list.cend(), std::back_inserter(parameters), [](const pybind11::object& py_obj){
+    return fromPyObj<rclcpp::Parameter>(py_obj);
+  });
+
+  setParametersImpl(remote_node_name, parameters, timeout_secs);
 }
 
 void GlobalParameterClient::setParametersImpl(const std::string &remote_node_name,

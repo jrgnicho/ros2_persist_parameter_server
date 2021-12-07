@@ -17,7 +17,7 @@ rclpy_parameter_utils::RclCppComponent::RclCppComponent()
   int argc = 1;
   char *argv[] = {(char*)"nameless"};
   rclcpp::init(argc, argv);
-  RCLCPP_INFO(rclcpp::get_logger("rclpy_parameter_utils"), "initialized rclcpp");
+  RCLCPP_DEBUG(rclcpp::get_logger("rclpy_parameter_utils"), "initialized rclcpp");
 
 }
 

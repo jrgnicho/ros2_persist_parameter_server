@@ -23,19 +23,36 @@ namespace rclpy_parameter_utils
 class GlobalParameterClient: RclCppComponent
 {
 public:
-  GlobalParameterClient(const std::string& node_name, const std::string& node_namespace, int number_of_threads = 1);
+  GlobalParameterClient(const std::string& node_name, const std::string& node_namespace = "", int number_of_threads = 2);
   virtual ~GlobalParameterClient();
 
   void start();
 
   void stop();
 
-  rcl_interfaces::msg::Parameter getParameter(const std::string& full_parameter_name, double timeout_secs = 0.5);
+  pybind11::object getParameter(const std::string& remote_node_name,
+                                              const std::string& parameter_name, double timeout_secs = 0.5);
 
-  pybind11::dict getParameters(const std::string& parameters_namespace, const std::vector<std::string>& parameter_names,
+  pybind11::dict getParameters(const std::string& remote_node_name, const std::vector<std::string>& parameter_names,
                                double timeout_secs = 0.5);
 
-  void setParameter(const std::string &full_parameter_name, const rclcpp::ParameterValue& parameter_val, double timeout_secs = 0.5);
+  /**
+   * @brief sets a parameter value
+   * @param remote_node_name name of the remote node holding the parameter
+   * @param py_obj a python object of the type rclpy::Parameter
+   * @param timeout_secs a timeout in seconds to wait for the global parameter server
+   */
+  void setParameter(const std::string &remote_node_name, const pybind11::object& py_obj,
+                    double timeout_secs = 0.5);
+
+  /**
+   * @breif sets multiple parameters
+   * @param remote_node_name name name of the remote node holding the parameter
+   * @param py_obj_list List of parameters to set. Each item should be of the rclpy::Parameter python type
+   * @param timeout_secs a timeout in seconds to wait for the global parameter server
+   */
+  void setParameters(const std::string &remote_node_name, const std::vector<pybind11::object>& py_obj_list,
+                     double timeout_secs = 0.5);
 
 protected:
 
@@ -48,7 +65,7 @@ protected:
                                     double timeout_secs);
 
   void setParametersImpl(const std::string& remote_node_name,
-                         const std::vector<rclcpp::Parameter>& parameter_names,
+                         const std::vector<rclcpp::Parameter>& parameters,
                          double timeout_secs);
 
 
