@@ -12,6 +12,13 @@ from launch_ros.actions import Node
 
 from launch.substitutions import LaunchConfiguration
 
+def print_instructions():
+    print('\n------------------INSTRUCTIONS -------------------------')
+    print('1 - See the parameter list using:\n\t\t"ros2 param list"')
+    print('2 - Get a parameter using the command:\n\t\t"ros2 param get <server_name> <param_name>"')
+    print('3 - Then run "ros2 run rclpy_parameter_utils demo_global_params_client.py" and query the parameters to see the new values')
+    print('\n')
+
 def load_yaml(yaml_file_path):
     with open(yaml_file_path,'r') as f:
         return yaml.load(f)
@@ -43,8 +50,7 @@ def launch_setup(context, *args, **kwargs):
     
     nodes_list = [parameter_server_node]
     #nodes_list.append(example_parameter_client_node)
-    print('Query the parameters using "ros2 param list" and "ros2 param get" to see the current values')
-    print('Then run "ros2 run rclpy_parameter_utils demo_global_params_client.py" and query the parameters to see the new values')
+    nodes_list.append(OpaqueFunction(function = lambda context, *args, **kwargs : print_instructions()))
         
     return nodes_list
 
