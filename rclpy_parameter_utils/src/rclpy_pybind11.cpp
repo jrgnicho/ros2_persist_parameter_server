@@ -25,10 +25,9 @@ namespace py = pybind11;
   PYBIND11_MODULE(rclpy_parameter_utils, m)
   {
     m.doc() = "rclpy_parameter_utils library for support with global parameters";
-    py::class_<GlobalParameterClient >(m,"GlobalParameterClient")
-        .def(py::init<const std::string&, const std::string&, int>(),"GlobalParameterClient constructor",
-             py::arg("node_name"), py::arg("node_namespace"), py::arg("number_of_threads") = 2)
-        .def("start", &GlobalParameterClient::start)
+    py::class_<GlobalParameterClient, std::shared_ptr<GlobalParameterClient> >(m,"GlobalParameterClient")
+        .def(py::init<const std::string&, const std::string&>(),"GlobalParameterClient constructor",
+             py::arg("node_name"), py::arg("node_namespace"))
         .def("get_parameter",&GlobalParameterClient::getParameter,"get parameter from global server",
              py::arg("remote_node_name"), py::arg("parameter_name"), py::arg("timeout_secs") = 1.0)
         .def("get_parameters", &GlobalParameterClient::getParameters,"get parameters from global server",

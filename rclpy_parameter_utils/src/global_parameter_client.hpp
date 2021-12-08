@@ -23,12 +23,8 @@ namespace rclpy_parameter_utils
 class GlobalParameterClient: RclCppComponent
 {
 public:
-  GlobalParameterClient(const std::string& node_name, const std::string& node_namespace = "", int number_of_threads = 2);
+  GlobalParameterClient(const std::string& node_name, const std::string& node_namespace = "");
   virtual ~GlobalParameterClient();
-
-  void start();
-
-  void stop();
 
   pybind11::object getParameter(const std::string& remote_node_name,
                                               const std::string& parameter_name, double timeout_secs = 0.5);
@@ -70,8 +66,6 @@ protected:
 
 
   rclcpp::Node::SharedPtr node_;
-  rclcpp::executors::MultiThreadedExecutor executor_;
-  std::thread executor_thread_;
 };
 
 } /* namespace rclpy */

@@ -31,7 +31,8 @@ def launch_setup(context, *args, **kwargs):
         name = parameter_server_name,
         output = 'log',
         parameters = [parameters_yaml],
-        respawn_delay = 5.0)
+        respawn_delay = 5.0,
+        arguments = '--ros-args --log-level fatal'.split())
     
     example_parameter_client_node = Node(
         executable = 'example_param_client.py',
@@ -42,7 +43,9 @@ def launch_setup(context, *args, **kwargs):
     
     nodes_list = [parameter_server_node]
     #nodes_list.append(example_parameter_client_node)
-    
+    print('Query the parameters using "ros2 param list" and "ros2 param get" to see the current values')
+    print('Then run "ros2 run rclpy_parameter_utils demo_global_params_client.py" and query the parameters to see the new values')
+        
     return nodes_list
 
 def generate_launch_description():

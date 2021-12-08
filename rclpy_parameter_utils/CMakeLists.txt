@@ -57,7 +57,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(TARGETS ${PROJECT_NAME}
   DESTINATION "${PYTHON_INSTALL_DIR}/${PROJECT_NAME}")
   
-install(PROGRAMS scripts/example_param_client.py
+install(PROGRAMS scripts/demo_global_params_client.py
   DESTINATION lib/${PROJECT_NAME})
   
 install(DIRECTORY

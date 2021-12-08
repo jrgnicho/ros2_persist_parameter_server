@@ -8,15 +8,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include "rclcpp_component.hpp"
 
+const static int RCLCPP_ARGC = 0;
+const static std::vector<char*> RCLCPP_ARGV = {};
+
 rclpy_parameter_utils::RclCppComponent::RclCppComponent()
 {
-  if(rclcpp::is_initialized())
+  if(rclcpp::ok())
   {
     return;
   }
-  int argc = 1;
-  char *argv[] = {(char*)"nameless"};
-  rclcpp::init(argc, argv);
+  rclcpp::init(RCLCPP_ARGC, RCLCPP_ARGV.data());
   RCLCPP_DEBUG(rclcpp::get_logger("rclpy_parameter_utils"), "initialized rclcpp");
 
 }

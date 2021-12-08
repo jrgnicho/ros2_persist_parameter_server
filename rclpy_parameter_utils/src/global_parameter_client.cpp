@@ -105,34 +105,16 @@ rclcpp::Parameter fromPyObj(const pybind11::object& py_obj)
 namespace rclpy_parameter_utils
 {
 
-GlobalParameterClient::GlobalParameterClient(const std::string& node_name, const std::string& node_namespace, int number_of_threads):
+GlobalParameterClient::GlobalParameterClient(const std::string& node_name, const std::string& node_namespace):
     RclCppComponent(),
-    node_(std::make_shared<rclcpp::Node>(node_name, node_namespace, rclcpp::NodeOptions())),
-    executor_(rclcpp::ExecutorOptions(), number_of_threads)
+    node_(std::make_shared<rclcpp::Node>(node_name, node_namespace, rclcpp::NodeOptions()))
 {
 
 }
 
 GlobalParameterClient::~GlobalParameterClient()
 {
-  stop();
-}
 
-void GlobalParameterClient::start()
-{
-  executor_thread_ = std::thread([&](){
-    executor_.add_node(node_);
-    executor_.spin();
-  });
-}
-
-void GlobalParameterClient::stop()
-{
-  executor_.cancel();
-  if(executor_thread_.joinable())
-  {
-    executor_thread_.join();
-  }
 }
 
 pybind11::object GlobalParameterClient::getParameter(const std::string& remote_node_name,
