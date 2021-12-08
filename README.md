@@ -218,7 +218,16 @@ make sure to add the path of `launch` package to the PATH environment.
 # source <launch_workspace>/install/setup.bash
 ```
 
-## Run
+## Run Demos
+### Python (rclpy)
+- Run the the following launch file 
+```ros2 launch rclpy_parameter_utils demo_global_params.launch.py ```
+
+and follow the instructions printed on the console.
+
+- Inspect the **scripts/demo_global_param_client.py** node in the _rclpy_parameter_utils_ package to see how to use the `GlobalParameterClient` python class to get and set parameters
+
+### CPP 
 
 [test.py](./test/test.py) is the entry for test.
 
