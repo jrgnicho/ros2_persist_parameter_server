@@ -23,7 +23,8 @@ def main():
     
     global_parameter_server_name = node.get_parameter_or('parameter_server_name',
                                                            rclpy.Parameter('parameter_server_name', value = DEFAULT_PARAMETER_SERVER_NAME)).value
-    global_param_client = rclpy_parameter_utils.impl.GlobalParameterClient(node.get_name() + '_client','')
+    #global_param_client = rclpy_parameter_utils.impl.GlobalParameterClient(node.get_name() + '_client','')
+    global_param_client = rclpy_parameter_utils.GlobalParameterClient(node)
     
     
     # Getting Parameters
@@ -61,8 +62,8 @@ def main():
     except KeyboardInterrupt as ex:
         
         # explicitly garbage collecting since rclpy.shutdown() appears to disrupt this process
-        del node
-        del global_param_client
+        #del node
+        #del global_param_client
         rclpy.shutdown()
         
     thread.join()    
