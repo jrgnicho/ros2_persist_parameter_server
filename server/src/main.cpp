@@ -96,7 +96,7 @@ int main(int argc, char **argv)
       executor.spin();
     });
 
-    auto rate = rclcpp::Rate(NODE_SLEEP_FREQUENCY);
+    rclcpp::Rate rate(NODE_SLEEP_FREQUENCY);
     while(rclcpp::ok())
     {
       rate.sleep();
