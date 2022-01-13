@@ -14,10 +14,16 @@
 
 #include <boost/program_options.hpp>
 
+#include <thread>
+
+#include <rclcpp/executors/multi_threaded_executor.hpp>
+
 #include "parameter_server.h"
 
 using namespace std;
 using namespace boost::program_options;
+
+static const float NODE_SLEEP_FREQUENCY = 30.0; //hz
 
 int main(int argc, char **argv)
 {
@@ -70,6 +76,8 @@ int main(int argc, char **argv)
     );
 
   ParameterServer::SharedPtr node = nullptr;
+  std::thread spin_thread;
+  rclcpp::executors::MultiThreadedExecutor executor;
   try
   {
     node = ParameterServer::make_shared(node_name, options, opt_file);
@@ -83,15 +91,25 @@ int main(int argc, char **argv)
       node->get_fully_qualified_name(),
       node->list_parameters({}, rcl_interfaces::srv::ListParameters::Request::DEPTH_RECURSIVE).names.size());
 
-    rclcpp::spin(node);
+    spin_thread = std::thread([&](){
+      executor.add_node(node);
+      executor.spin();
+    });
+
+    auto rate = rclcpp::Rate(NODE_SLEEP_FREQUENCY);
+    while(rclcpp::ok())
+    {
+      rate.sleep();
+    }
   }
   catch (const std::exception& e)
   {
     std::cerr << "Catch exception: " << e.what() << std::endl;
     ret = EXIT_FAILURE;
   }
-
+  executor.cancel();
   rclcpp::shutdown();
+  spin_thread.join();
   return ret;
 }
 
