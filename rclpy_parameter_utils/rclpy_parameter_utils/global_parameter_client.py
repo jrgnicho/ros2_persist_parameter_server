@@ -28,31 +28,31 @@ class GlobalParameterClient:
     def __del__(self):
         pass
         
-    def set_parameter(self, param_server_name : str, param: Parameter, timeout: float  = 01.0):
+    def set_parameter(self, param_server_name : str, param: Parameter, timeout: float  = 5.0):
         return self._set_parameter_impl(param_server_name, [param], timeout) 
     
-    def set_parameters(self, param_server_name : str, params_list: List[Parameter], timeout: float  = 1.0):
+    def set_parameters(self, param_server_name : str, params_list: List[Parameter], timeout: float  = 5.0):
         return self._set_parameter_impl(param_server_name, params_list, timeout)
         
-    def get_parameter(self,param_server_name : str, param_name : str, timeout: float  = 1.0):
+    def get_parameter(self,param_server_name : str, param_name : str, timeout: float  = 5.0):
         
-        params = self._get_parameters_impl(param_server_name, [param_name], timeout)  
+        params = self._get_parameters_impl_use_fut(param_server_name, [param_name], timeout)  
         if len(params) == 0:            
             return Parameter(name='', value=None)
         return params[0]  
     
-    def get_parameter_or(self,param_server_name, param_name, param_default, timeout: float  = 1.0):
+    def get_parameter_or(self,param_server_name, param_name, param_default, timeout: float  = 5.0):
         if not isinstance(param_default, Parameter):
             raise RuntimeError('Default parameter passed is not of %s type', str(type(Parameter)))  
         
-        params = self._get_parameters_impl(param_server_name, [param_name], timeout)  
+        params = self._get_parameters_impl_use_fut(param_server_name, [param_name], timeout)  
         if len(params) == 0:
             return param_default
         
         return params[0]
     
-    def get_parameters(self, param_server_name: str, param_names : List[str], timeout: float  = 1.0):
-        params_list = self._get_parameters_impl(param_server_name, param_names, timeout) 
+    def get_parameters(self, param_server_name: str, param_names : List[str], timeout: float  = 5.0):
+        params_list = self._get_parameters_impl_use_fut(param_server_name, param_names, timeout) 
         if len(params_list) == 0:
             return {}
         
