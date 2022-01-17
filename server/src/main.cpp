@@ -23,7 +23,7 @@
 using namespace std;
 using namespace boost::program_options;
 
-static const float NODE_SLEEP_FREQUENCY = 30.0; //hz
+static const float NODE_SLEEP_FREQUENCY = 100.0; //hz
 
 int main(int argc, char **argv)
 {

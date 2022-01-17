@@ -1,6 +1,8 @@
 
 import threading
 
+import time
+
 from typing import List
 
 from rclpy.parameter import Parameter
@@ -11,7 +13,7 @@ from rcl_interfaces.srv import *
 from rclpy.parameter import Parameter
 import rclpy_parameter_utils
 import rclpy
-from builtins import isinstance
+from builtins import isinstance, TypeError
 
 class GlobalParameterClient:
     
@@ -26,20 +28,20 @@ class GlobalParameterClient:
     def __del__(self):
         pass
         
-    def set_parameter(self, param_server_name : str, param: Parameter, timeout: float  = 0.5):
+    def set_parameter(self, param_server_name : str, param: Parameter, timeout: float  = 01.0):
         return self._set_parameter_impl(param_server_name, [param], timeout) 
     
-    def set_parameters(self, param_server_name : str, params_list: List[Parameter], timeout: float  = 0.5):
+    def set_parameters(self, param_server_name : str, params_list: List[Parameter], timeout: float  = 1.0):
         return self._set_parameter_impl(param_server_name, params_list, timeout)
         
-    def get_parameter(self,param_server_name : str, param_name : str, timeout: float  = 0.5):
+    def get_parameter(self,param_server_name : str, param_name : str, timeout: float  = 1.0):
         
         params = self._get_parameters_impl(param_server_name, [param_name], timeout)  
         if len(params) == 0:            
             return Parameter(name='', value=None)
         return params[0]  
     
-    def get_parameter_or(self,param_server_name, param_name, param_default, timeout: float  = 0.5):
+    def get_parameter_or(self,param_server_name, param_name, param_default, timeout: float  = 1.0):
         if not isinstance(param_default, Parameter):
             raise RuntimeError('Default parameter passed is not of %s type', str(type(Parameter)))  
         
@@ -49,7 +51,7 @@ class GlobalParameterClient:
         
         return params[0]
     
-    def get_parameters(self, param_server_name: str, param_names : List[str], timeout: float  = 0.5):
+    def get_parameters(self, param_server_name: str, param_names : List[str], timeout: float  = 1.0):
         params_list = self._get_parameters_impl(param_server_name, param_names, timeout) 
         if len(params_list) == 0:
             return {}
@@ -65,8 +67,13 @@ class GlobalParameterClient:
             return []
         
         req = GetParameters.Request(names = param_names)
+        res = None
         
-        res = self.__get_param_client.call(req) 
+        try:
+            res = self.__get_param_client.call(req) 
+        except TypeError as ex:
+            self.__node.get_logger().error(str(ex))
+            return []
                 
         if res is None:
             if self.__print_errors:
@@ -106,23 +113,19 @@ class GlobalParameterClient:
         req = GetParameters.Request(names = param_names)
         
         fut = self.__get_param_client.call_async(req) 
-        event = threading.Event()
-
-        def unblock(future):
-            nonlocal event
-            event.set()            
-
-        fut.add_done_callback(unblock)
         
-        if not fut.done():
-            event.wait(timeout = timeout)
-        
+        total_elapsed_time = 0.0
+        service_wait_sleep_pause = 0.01
+        while not fut.done() and total_elapsed_time < timeout:
+            time.sleep(service_wait_sleep_pause)
+            total_elapsed_time += service_wait_sleep_pause
+                    
         if not fut.done():
             if self.__print_errors:
                 self.__node.get_logger().error('Get parameter service for parameter server %s timed out'%(param_server_name))
-            return []          
-        res = fut.result()        
-        
+            return []
+                  
+        res = fut.result()  
         if res is None:
             if self.__print_errors:
                 self.__node.get_logger().error('Failed to call get parameter service for parameter server %s'%(param_server_name))
@@ -150,17 +153,33 @@ class GlobalParameterClient:
     
     def _set_parameter_impl(self, param_server_name, params_list : List[Parameter], timeout: float  = 0.1):
         if self.__parameter_server_name != param_server_name:
-            self._create_clients(parameter_server_name)
+            self._create_clients(param_server_name)
                     
         if not self.__set_param_client.wait_for_service(timeout_sec = timeout):            
-            return []
+            return False
             
         req = SetParameters.Request()
         for param in params_list:
             req.parameters.append(param.to_parameter_msg())
-            
-        res = self.__set_param_client.call(req)
         
+        res = None
+        try:    
+            fut = self.__set_param_client.call_async(req)
+        except TypeError as ex:
+            self.__node.get_logger().error('Set Parameter service failed: %s'%(str(ex)))
+            return False
+        
+        total_elapsed_time = 0.0
+        service_wait_sleep_pause = 0.01
+        while not fut.done() and total_elapsed_time < timeout:
+            time.sleep(service_wait_sleep_pause)
+            total_elapsed_time += service_wait_sleep_pause
+            
+        if not fut.done():
+            self.__node.get_logger().error('Set Parameter Service call timed out after %f secs'%(timeout))
+            return False
+        
+        res = fut.result()        
         if len(res.results) == 0:
             param_names = [pn.name for pn in params_list]
             if self.__print_errors:
